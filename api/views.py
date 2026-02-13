@@ -129,8 +129,11 @@ class TagViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        return super().get_queryset().filter(userId = user.id)
+        return super().get_queryset().filter(userId=user)
     
+    # on create set userid to authenticated user id
+    def perform_create(self, serializer):
+        serializer.save(userId=self.request.user)
     
 class NoteViewSet(viewsets.ModelViewSet):
     queryset = Note.objects.all()
@@ -139,7 +142,10 @@ class NoteViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        return super().get_queryset().filter(userId = user.id)
+        return super().get_queryset().filter(userId=user)
+    # on create set userid to authenticated user id
+    def perform_create(self, serializer):
+        serializer.save(userId=self.request.user)
     
     
 class TodoViewSet(viewsets.ModelViewSet):
@@ -148,10 +154,22 @@ class TodoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         user = self.request.user
-        return super().get_queryset().filter(userId = user.id)
+        return super().get_queryset().filter(userId=user)
     
+    # on create set userid to authenticated user id
+    def perform_create(self, serializer):
+        serializer.save(userId=self.request.user)
     
 class TodoItemViewSet(viewsets.ModelViewSet):
     queryset = TodoItem.objects.all()
     serializer_class = TodoItemSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        # Filter todo items where the parent Todo belongs to the current user
+        return super().get_queryset().filter(todoId__userId=user)
+    
+    # on create set userid to authenticated user id
+    def perform_create(self, serializer):
+        serializer.save(userId=self.request.user)
