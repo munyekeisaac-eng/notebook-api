@@ -1,7 +1,9 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from venv import logger
 from django.conf import settings 
+import logging
 # send email using smtp
 def sendEmail(email: str, message: str, subject: str ='Your verification code'):
     try:
@@ -13,7 +15,8 @@ def sendEmail(email: str, message: str, subject: str ='Your verification code'):
             msg["to"] = email
             msg["subject"] = subject
             msg.attach(MIMEText(message,'plain'))
-            server.send_message(msg)        
+            server.send_message(msg) 
+            return True
     except Exception as e:
-        pass
-    
+        logger.error(f"Email sending failed: {e}")
+        return False

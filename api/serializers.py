@@ -12,7 +12,7 @@ class ResetPasswordSerializer(serializers.Serializer):
     conf_password = serializers.CharField(max_length=500)
     def validate(self, attrs):
         if attrs["password"] != attrs["conf_password"]:
-            return serializers.ValidationError({"conf_password": "Passwords do not match"})
+            raise  serializers.ValidationError({"conf_password": "Passwords do not match"})
     
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,7 +41,7 @@ class TodoItemSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class TodoSerializer(serializers.ModelSerializer):
-    todoItems = TodoItemSerializer(many=True)
+    todoItems = TodoItemSerializer(many=True, read_only=True)
     class Meta:
         model = Todo
         fields = ['id','title','todoItems', 'userId']   

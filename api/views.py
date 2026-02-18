@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -29,8 +30,9 @@ class AuthViewSet(viewsets.ViewSet):
     def registerUser(self, request):
         data = request.data
         serializer_data = UserCreateSerializer(data=data)
-        serializer_data.is_valid()
-        user = User.objects.create(**serializer_data.data)
+        serializer_data.is_valid(raise_exception=True)
+        user = User.objects.create(**serializer_data.validated_data)
+
         # user = serializer_data.save()
         user.set_password(data.get('password'))
         user.save()
@@ -80,10 +82,13 @@ class AuthViewSet(viewsets.ViewSet):
         
         # create OTP with user id FK
         code = random.randint(100000,999999)
-        OTP.objects.create({
-            "code": code,
-            "user_id" : user.id
-        })
+       
+        OTP.objects.create(
+            code=code,
+            user_id=user,
+            expires_at = datetime.now(timezone.utc)+timedelta(seconds=180)
+        )
+
         # send otp via email
         sendEmail(user.email, f"Your OTP code is {code}")
         return Response({"message": "OTP was successfully sent to your email"})
@@ -91,8 +96,8 @@ class AuthViewSet(viewsets.ViewSet):
     @action(detail=False,methods=['post'],url_name='reset-password', url_path='reset-password')
     def resetPassword(self, request):
         data = request.data
-        serializer = ResetPasswordSerializer(data)
-        serializer.is_valid()
+        serializer = ResetPasswordSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
         
         # confirm email and validate otp
         user = User.objects.filter(email=data.get("email")).first()
@@ -100,6 +105,11 @@ class AuthViewSet(viewsets.ViewSet):
             return Response({"message": "Invalid Email address"},400)
         if not OTP.objects.filter(code = data.get("otp")).filter(user_id = user.id).exists():
             return Response({"message": "Invalid Email address"},400)
+        #chexk if otp is expired
+        otp = OTP.objects.filter(code = data.get("otp")).filter(user_id = user.id).first()
+        if otp.expires_at < datetime.now(timezone.utc):
+            return Response({"message": "OTP is expired"},400)  
+        otp.delete() # delete otp after successful validation
         # set new password
         user.set_password(data.get("password"))
         user.save()
